@@ -1,0 +1,90 @@
+#define _DISABLE_TLS_
+#include <BridgeSSLClient.h>
+#include <ThingerYun.h>
+
+#define USERNAME "Invernaderos2019"
+#define DEVICE_ID "EPHEC"
+#define DEVICE_CREDENTIAL "santamonica"
+
+#include "DFRobot_PH.h"
+#include <EEPROM.h>
+
+#define PH_PIN A1
+float voltage,phValue,temperature = 25;
+DFRobot_PH ph;
+#define EC_PIN_NUM 2
+#define EC_LED 3
+int ecPin = A2;
+
+float fev = 0;
+int rer = 0;
+int pevt = 0;
+const int ledPIN =11;
+ThingerYun thing(USERNAME, DEVICE_ID, DEVICE_CREDENTIAL);
+void setup()
+{
+   pinMode(ledPIN , OUTPUT);
+  Serial.begin(115200);
+  ph.begin();
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // initialize bridge
+  Bridge.begin();
+
+  // pin control example (i.e. turning on/off a light, a relay, etc)
+  //thing["led"] << digitalPin(LED_BUILTIN);
+
+  // resource output example (i.e. reading a sensor value, a variable, etc)
+ thing["millis"] >> outputValue(millis());
+    thing["estacion EC_PH"] >> [](pson& out){
+     out["PH"] = phValue;
+      out["EC"] =fev;
+ // thing["finalCalculation"] >> 
+ // thing["ecCalculation"] >>  outputValue(fev);
+ };
+
+}
+
+void loop()
+{
+   digitalWrite(ledPIN , HIGH);
+   thing.handle();
+    ProcessEC(true);
+    delay(1000);
+//    thing.handle();
+    static unsigned long timepoint = millis();
+    if(millis()-timepoint>1000U)  //time interval: 1s
+    {
+      timepoint = millis();
+      voltage = analogRead(PH_PIN)/1024.0*3500;  
+      phValue = ph.readPH(voltage,temperature); 
+      Serial.print("Valor de PH: ");
+      Serial.println(phValue);
+       
+     
+    }
+    ph.calibration(voltage,temperature);  
+}
+
+float readTemperature()
+{}
+
+void ProcessEC(bool printToConsole)
+{
+  rer = analogRead(EC_PIN_NUM);
+  pevt = map(rer,0,1023,0,5000);
+  fev = rer*5.00/1024;
+  fev = fev / 1.00;
+  Serial.print("Electroconductividad: ");
+  Serial.println(fev);
+  analogWrite(EC_LED,pevt);
+
+  if(printToConsole)
+  {
+    PrintParamsToConsole(rer,pevt,fev);
+  }
+}
+void PrintParamsToConsole(int rread, int pval,float finalCalculation)
+{
+     
+}
