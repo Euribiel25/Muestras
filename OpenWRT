@@ -1,0 +1,21 @@
+opkg update
+opkg install openssh-sftp-server  
+opkg update
+opkg install uci libuci libuci-lua
+opkg install php5
+opkg install php5-mod-json
+opkg install php5-mod-curl
+opkg install php5-cli
+opkg install php5-cgi
+opkg install nano
+
+uci set uhttpd.main.interpreter=".php=/usr/bin/php-cgi"
+uci set uhttpd.main.index_page="index.html index.htm default.html default.htm index.php"
+uci commit uhttpd
+sed -i 's,doc_root.*,doc_root = "",g' /etc/php.ini
+sed -i 's,;short_open_tag = Off,short_open_tag = On,g' /etc/php.ini
+/etc/init.d/uhttpd restart
+
+uci set yunbridge.config.disabled=0
+uci commit yunbridge
+reboot
