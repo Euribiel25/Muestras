@@ -1,0 +1,35 @@
+define PIN_ANEMOMETER  1     // Digital 2
+#define PIN_RAINGAUGE  3     // Digital 3
+#define PIN_VANE        A5     // Analog 5
+int numRevsAnemometer =0;
+int  numDropsRainGauge=0;
+void setup() {
+   Serial.begin(9600);
+   pinMode(PIN_ANEMOMETER, INPUT);
+   digitalWrite(PIN_ANEMOMETER, HIGH);
+   digitalWrite(PIN_RAINGAUGE, HIGH);
+   attachInterrupt(0, countRainGauge, FALLING);
+   attachInterrupt(1, countAnemometer, FALLING);
+}
+
+void loop() {
+delay(10000);
+Serial.println(calculateRain());
+}
+void countAnemometer() {
+   numRevsAnemometer++;
+}
+void countRainGauge() {
+   numDropsRainGauge++;
+}
+
+
+
+String calculateRain(){
+  double n = numDropsRainGauge*0.5*0.2794;
+  String answer = "Cantidad de lluvia: ";
+  answer += n;
+  answer += " mm de agua";
+  numDropsRainGauge =0;
+  return answer;
+}
