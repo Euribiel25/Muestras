@@ -1,0 +1,161 @@
+#define _DISABLE_TLS_
+#include <BridgeSSLClient.h>
+
+#include <ThingerYun.h>
+  
+
+ThingerYun thing("Invernaderos2019","EM3","santamonica");
+
+#include <dht.h>
+dht DHT;
+//Constants
+#define DHT21_PIN 11// DHT 22  (AM2302) - what pin we're connected to
+#define DHT1_PIN 12  
+#include <AltSoftSerial.h> //Librería AltSoftSerial
+AltSoftSerial altSerial; //Instancia de la clase AltSoftSerial
+//Flags para el control de la entrada de datos
+boolean startSequence = true;
+boolean receiveData = false;
+
+boolean flag = true;
+void(* resetFunc) (void) = 0;
+int contador = 0;
+//Variables
+float cap;
+float h;  //Stores humidity value
+float t; //Stores temperature value
+float h1;  //Stores humidity value
+float t1; //Stores temperature value
+const int ledPIN =9;
+
+void setup(){
+   pinMode(ledPIN , OUTPUT);
+   Serial.begin(115200);
+  // initialize bridge
+  Bridge.begin();
+  altSerial.begin(4800);
+  delay (5000);
+ thing["millis"] >> outputValue(millis());
+//thing["cap"] >> outputValue(cap);
+
+
+  thing["estacion 3"] >> [](pson& out){
+     out["sh1"] =cap;
+    out["t"] =t;
+    out["t1"] =t1;
+    out["h"] =h;
+    out["h1"] =h1;
+ 
+    
+};
+}
+void loop()
+{
+   digitalWrite(ledPIN , HIGH);
+  thing.handle();
+      delay(1000); //Delay 2 sec.
+    int chk = DHT.read21(DHT21_PIN);
+    //Read data and store it to variables hum and temp
+  h = DHT.humidity;
+  t= DHT.temperature;
+
+    int chk1 = DHT.read21(DHT1_PIN);
+    //Read data and store it to variables hum and temp
+  h1 = DHT.humidity;
+  t1= DHT.temperature;
+    //Print temp and humidity values to serial monitor
+    Serial.print("Humidity: ");
+    Serial.print(h);
+   Serial.print(" %, Temp: ");
+   Serial.print(t);
+   Serial.println(" Celsius");
+
+   Serial.print("Humidity1: ");
+    Serial.print(h1);
+   Serial.print(" %, Temp1: ");
+  Serial.print(t1);
+   Serial.println(" Celsius");
+
+ delay(1000);
+//cap=12;
+  /*
+     Bloque de programación para recibir datos
+     de la computadora
+  */
+  if (flag) {  // Parte a eliminar y que sea automático sin tener que poner start en el puerto serial
+    //Serial.println("starting...");
+    receiveData = true;
+    Serial.flush();
+    altSerial.flush();
+    startTraceMode();
+    flag = false;
+  //  Serial.println("starting...");
+  }
+
+  // if (Serial.available() > 0) {
+  // String input = Serial.readString();
+  //Si el dato recibido es start, se empieza a leer datos
+  //if (input == "start") {  // Parte a eliminar y que sea automático sin tener que poner start en el puerto serial
+  //Serial.println("starting...");
+  //receiveData = true;
+  //Serial.flush();
+  //altSerial.flush();
+  //startTraceMode();
+  //flag = false;
+  //}
+  // }
+  //Si el flag esta activo
+  if (receiveData) {
+    //Si hay datos disponibles en el puerto serie del sensor...
+    if (altSerial.available() > 0) {
+      while (altSerial.available() > 0) {
+        delay(25);
+        //Se bloquea la secuencia de inicio
+        if (startSequence) {                       // Luego de conectar el protoboard la secuencia se queda aquí
+          altSerial.read();
+        }
+        else
+        {
+          //Se transforman los datos leidos a capacitancia
+
+          if (contador <= 62) {
+            float capacitance = 0;
+            float intervalos = 0;
+            float porcentaje = 0;
+            float final = 0;
+            capacitance = altSerial.read();
+            capacitance = capacitance + (altSerial.read() * 256);
+            // Se convierte a valores de humedad en porcentaje
+            intervalos = 15;
+            porcentaje = (capacitance - 12250) / (15);
+            cap = 100 - porcentaje;
+            //Se imprime el resultado
+         Serial.println(cap);
+            //Serial.println(" %");
+            contador++;
+
+          }
+          else {
+
+            resetFunc();
+          }
+
+        }
+      }
+      if (startSequence) {
+        startSequence = false;
+      }
+    }
+  }
+}
+//Secuencia de inicio del sensor
+void startTraceMode() {
+  startSequence = true;
+  altSerial.write(1);
+  delay(1000);
+  altSerial.write(0x54); // valores de bits obtenidos de device monitoring para recoger los datos
+  altSerial.write(0x19); // valores de bits obtenidos de device monitoring para recoger los datos
+}
+
+    
+
